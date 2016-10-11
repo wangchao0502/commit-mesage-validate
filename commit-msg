@@ -203,10 +203,11 @@ def check_footer
 end
 
 def show_error_message
-  puts '您的commit message不符合规范，有如下问题：'.red.bold.bg_cyan
+  puts '您的commit message不符合规范，有如下问题：'.red.bold
   puts error_message
-  puts "\n请修改后重新提交，您刚刚的提交是酱紫的".green
-  puts "\n#{$message.blue}"
+  puts "\n请修改后重新提交，您刚刚的提交是酱紫的：".green
+  puts "#{$message.blue}"
+  puts "\n[查看规范]：" + "http://doc.qima-inc.com/pages/viewpage.action?pageId=10692077".underline
   exit ask_force_commit
 end
 
