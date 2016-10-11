@@ -84,7 +84,7 @@ $body   = get_body
 $errors = []
 
 $regex = /^(\w*)(\(\w*\))?:( ?)(.*)$/
-$regex_type = /^(feat|fix|docs|style|refactor|pref|test|chore)$/
+$regex_type = /^(feat|fix|merge|docs|style|refactor|pref|test|chore)$/
 
 EXIT_CODE_ALLOW_COMMIT  = 0
 EXIT_CODE_REJECT_COMMIT = 1
@@ -114,8 +114,9 @@ def validate_type_right(type = '')
   unless $regex_type.match(type)
     $errors.push(
 %{#{type}不是约定的关键字，请使用以下关键字:
-    feat     : 新功能(feature)
+    feat     ：新功能(feature)
     fix      ：bug修复
+    merge    ：合并分支
     docs     ：文档修改
     style    ：缩紧，空格，换行，大小写等调整（不影响代码运行的变动）
     refactor ：代码重构（代码结构调整，不影响功能）
