@@ -179,6 +179,7 @@ def check_empty
 end
 
 def check_header
+  exit(0) if $header.start_with?('Merge branch')
   matches = $regex.match($header)
   if !matches
     $errors.push('您的commit message不符合规范<type>(<scope>): <subject>')
