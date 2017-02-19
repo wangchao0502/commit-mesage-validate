@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-
 class String
   def black;          "\e[30m#{self}\e[0m" end
   def red;            "\e[31m#{self}\e[0m" end
@@ -9,7 +8,6 @@ class String
   def magenta;        "\e[35m#{self}\e[0m" end
   def cyan;           "\e[36m#{self}\e[0m" end
   def gray;           "\e[37m#{self}\e[0m" end
-
   def bg_black;       "\e[40m#{self}\e[0m" end
   def bg_red;         "\e[41m#{self}\e[0m" end
   def bg_green;       "\e[42m#{self}\e[0m" end
@@ -18,7 +16,6 @@ class String
   def bg_magenta;     "\e[45m#{self}\e[0m" end
   def bg_cyan;        "\e[46m#{self}\e[0m" end
   def bg_gray;        "\e[47m#{self}\e[0m" end
-
   def bold;           "\e[1m#{self}\e[22m" end
   def italic;         "\e[3m#{self}\e[23m" end
   def underline;      "\e[4m#{self}\e[24m" end
@@ -55,7 +52,6 @@ end
 
 def get_footer
   footer = Array.new
-
   $message.lines.reverse.each do |line|
     if line.start_with?("Closes")
       footer.push(line)
@@ -63,31 +59,40 @@ def get_footer
       break
     end
   end
-
   footer.reverse.join
 end
 
 $message_file = ARGV[0]
-$message = File.read($message_file)
 
+$message    = File.read($message_file)
 # 删除diff代码
-$message = $message[0..$message.index(/# Everything below will be removed/) || -1]
+$message    = $message[0..$message.index(/# Everything below will be removed/) || -1]
 # 删除注释代码
-$message = remove_comment($message)
+$message    = remove_comment($message)
 # 删除首尾空行
-$message = strip_message($message)
-
-$header = get_header
-$footer = get_footer
-$body   = get_body
-
-$errors = []
-
-$regex = /^(\w*)(\(\w*\))?:( ?)(.*)$/
-$regex_type = /^(feat|fix|merge|docs|style|refactor|pref|test|chore)$/
+$message    = strip_message($message)
+$header     = get_header
+$footer     = get_footer
+$body       = get_body
+$errors     = []
+$regex      = /^(\w*)(\(\w*\))?:( ?)(.*)$/
+$regex_type = /^(feat|fix|merge|docs|style|refactor|perf|test|chore)$/
 
 EXIT_CODE_ALLOW_COMMIT  = 0
 EXIT_CODE_REJECT_COMMIT = 1
+
+TYPES_TABLE = %{
+    #{'*---------------------------------------------------------------------*'.green}
+    #{'|'.green}  feat     ：新功能(feature)                                         #{'|'.green}
+    #{'|'.green}  fix      ：bug修复                                                 #{'|'.green}
+    #{'|'.green}  merge    ：合并分支                                                #{'|'.green}
+    #{'|'.green}  docs     ：文档修改                                                #{'|'.green}
+    #{'|'.green}  style    ：缩紧，空格，换行，大小写等调整（不影响代码运行的变动）  #{'|'.green}
+    #{'|'.green}  refactor ：代码重构（代码结构调整，不影响功能）                    #{'|'.green}
+    #{'|'.green}  perf     ：性能优化（improve performance）                         #{'|'.green}
+    #{'|'.green}  test     ：增加测试                                                #{'|'.green}
+    #{'|'.green}  chore    ：系统构建，打包                                          #{'|'.green}
+    #{'*---------------------------------------------------------------------*'.green}}
 
 def interactive?
   $stdin.tty?
@@ -112,18 +117,7 @@ end
 def validate_type_right(type = '')
   return if count_pysical_length(type) === 0
   unless $regex_type.match(type)
-    $errors.push(
-%{#{type}不是约定的关键字，请使用以下关键字:
-    feat     ：新功能(feature)
-    fix      ：bug修复
-    merge    ：合并分支
-    docs     ：文档修改
-    style    ：缩紧，空格，换行，大小写等调整（不影响代码运行的变动）
-    refactor ：代码重构（代码结构调整，不影响功能）
-    perf     ：性能优化（improve performance）
-    test     ：增加测试
-    chore    ：系统构建，打包}
-    )
+    $errors.push("#{type}不是约定的关键字，请使用以下关键字:#{TYPES_TABLE}")
   end
 end
 
@@ -148,16 +142,13 @@ def validate_message(matches)
   scope   = matches[2]
   space   = matches[3]
   subject = matches[4]
-
   $errors.clear
-
   validate_type_empty(type)
   validate_type_right(type)
   validate_scope_empty(scope)
   validate_space_following_colon(space)
   validete_subject_empty(subject)
   validate_subject_length(subject)
-
   $errors
 end
 
@@ -179,11 +170,15 @@ def check_empty
 end
 
 def check_header
-  exit(0) if $header.start_with?('Merge branch')
+  exit(0) if $header.start_with?('Merge')
   exit(0) if $header.start_with?('Revert')
   matches = $regex.match($header)
   if !matches
-    $errors.push('您的commit message不符合规范<type>(<scope>): <subject>')
+    $errors.push(
+%{message请使用如下格式<type>(<scope>): <subject>
+	
+    #{'* type为提交类型，scope为影响范围(选填)，subject为变更描述。type合法关键字如下'.italic.red}:#{TYPES_TABLE}}
+    )
   else
     validate_message(matches)
   end
@@ -192,7 +187,6 @@ end
 def check_body
   lines = $body.lines.map(&:strip)
   return if lines.empty?
-
   if !lines[0].empty?
     $errors.push('header和body之间需要插入空行')
   end
@@ -202,15 +196,14 @@ def check_body
 end
 
 def check_footer
-
 end
 
 def show_error_message
   puts '您的commit message不符合规范，有如下问题：'.red.bold
   puts error_message
-  puts "\n请修改后重新提交，您刚刚的提交是酱紫的：".green
+  puts "\n请修改后重新提交，您刚刚的提交是酱紫的".green
   puts "#{$message.blue}"
-  puts "\n[查看规范]：" + "http://doc.qima-inc.com/pages/viewpage.action?pageId=10692077".underline
+
   exit ask_force_commit
 end
 
@@ -218,12 +211,10 @@ def check_message
   # puts "header:\n#{$header}"
   # puts "body  :\n#{$body}"
   # puts "footer:\n#{$footer}"
-
   check_empty
   check_header
   check_body
   check_footer
-
   if $errors.empty?
     exit 0
   else
